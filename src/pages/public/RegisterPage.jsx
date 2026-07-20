@@ -66,7 +66,7 @@ const RegisterPage = () => {
           <div className="w-12 h-12 bg-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-violet-200">
             <Calendar className="w-6 h-6" />
           </div>
-          <span className="text-2xl font-black text-slate-900 tracking-tight">Apex<span className="text-violet-600">Planners</span></span>
+          <span className="text-2xl font-black text-slate-900 tracking-tight">Event<span className="text-amber-655 text-amber-600">Pro</span></span>
         </Link>
         <h2 className="text-3xl font-extrabold text-slate-950">Create an account</h2>
         <p className="mt-2 text-sm text-slate-600">

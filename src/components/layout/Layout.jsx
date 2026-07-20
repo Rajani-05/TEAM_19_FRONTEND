@@ -54,7 +54,7 @@ const Layout = () => {
       <div className="bg-slate-900 text-white p-4 flex md:hidden items-center justify-between shadow-md">
         <div className="flex items-center gap-2">
           <Calendar className="w-6 h-6 text-violet-400" />
-          <span className="font-bold tracking-tight">ApexPlanners</span>
+          <span className="font-bold tracking-tight">EventPro</span>
         </div>
         <button 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -76,7 +76,7 @@ const Layout = () => {
               <div className="w-9 h-9 bg-violet-600 rounded-lg flex items-center justify-center text-white shadow-sm">
                 <Calendar className="w-5 h-5" />
               </div>
-              <span className="font-bold text-white text-lg tracking-tight">ApexPlanners</span>
+              <span className="font-bold text-white text-lg tracking-tight">EventPro</span>
             </div>
             {/* Close button for mobile menu */}
             <button 

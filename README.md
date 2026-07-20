@@ -1,8 +1,8 @@
-# 🎭 ApexPlanners — Event Planning Platform Frontend
+# 🎭 EventPro — Event Planning Platform Frontend
 
 ### Capstone Project Submission Details
 - **College Name**: Madanapalle Institute of Technology & Science
-- **Team Name**: Apex Planners (Batch 19)
+- **Team Name**: EventPro (Batch 19)
 - **Subject**: Java Full Stack
 - **Team Members & Roles**:
   1. **B Rajani** (Roll No: 23691A05G1) — Database Architect & Team Lead
