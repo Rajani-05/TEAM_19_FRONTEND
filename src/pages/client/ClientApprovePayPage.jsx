@@ -59,15 +59,14 @@ const ClientApprovePayPage = () => {
   };
 
   // Poll event payments to check if a successful payment was logged by webhook
-  const pollPaymentStatus = async (eventId, attempts = 5) => {
+  const pollPaymentStatus = async (tokenVal, attempts = 5) => {
     for (let i = 0; i < attempts; i++) {
       try {
         // Wait 3 seconds
         await new Promise(resolve => setTimeout(resolve, 3000));
-        const res = await getPaymentHistory(eventId);
+        const res = await getClientEventView(tokenVal);
         if (res.success && res.data) {
-          const successPayment = res.data.find(tx => tx.status === 'SUCCESS');
-          if (successPayment) {
+          if (res.data.status === 'COMPLETED') {
             return true; // Success!
           }
         }
@@ -125,7 +124,7 @@ const ClientApprovePayPage = () => {
 
             if (verifyRes.success) {
               // Webhook handles status, let's poll to check
-              const webhookConfirmed = await pollPaymentStatus(event.id);
+              const webhookConfirmed = await pollPaymentStatus(clientLinkToken);
               if (webhookConfirmed) {
                 setPaymentState('success');
               } else {

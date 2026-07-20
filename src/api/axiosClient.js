@@ -42,8 +42,10 @@ axiosClient.interceptors.response.use(
       if (logoutCallback) {
         logoutCallback();
       }
-      // Force page redirection to login on unauthorized access
-      window.location.href = '/login';
+      // Force page redirection to login on unauthorized access, except for public client views
+      if (!window.location.pathname.startsWith('/client-view')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
