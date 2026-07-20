@@ -139,7 +139,6 @@ const RegisterPage = () => {
                   <option value="PLANNER">Event Planner</option>
                   <option value="VENDOR">Service Vendor</option>
                   <option value="CLIENT">Client</option>
-                  <option value="ADMIN">System Administrator</option>
                 </select>
               </div>
             </div>
