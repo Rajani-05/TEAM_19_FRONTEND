@@ -1,15 +1,5 @@
 # 🎭 EventPro — Event Planning Platform Frontend
 
-### Capstone Project Submission Details
-- **College Name**: Madanapalle Institute of Technology & Science
-- **Team Name**: EventPro (Batch 19)
-- **Subject**: Java Full Stack
-- **Team Members & Roles**:
-  1. **B Rajani** (Roll No: 23691A05G1) — Database Architect & Team Lead
-  2. **Sandra S Nair** (Roll No: 23691A05J1) — Backend Developer
-  3. **V Sarala** (Roll No: 23691A05J6) — Testing & Deployment Lead
-  4. **A Reddiswari** (Roll No: 23691A05G5) — Frontend Developer
-
 ---
 
 This is the complete React + Tailwind CSS frontend for the **Event Planning Marketplace Platform**. It matches the backend API contract exactly and integrates authentication, budget builders, Gemini AI negotiation assistants, and Razorpay payments.
