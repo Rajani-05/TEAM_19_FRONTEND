@@ -21,10 +21,6 @@ This is the complete React + Tailwind CSS frontend for the **Event Planning Mark
 
 Create a `.env` file in the root directory (based on `.env.example`):
 
-```env
-VITE_API_BASE_URL=http://localhost:8080
-VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
-```
 
 - `VITE_API_BASE_URL`: Base address of the Spring Boot backend.
 - `VITE_RAZORPAY_KEY_ID`: Your public Razorpay API key ID (never include secret keys in frontend configurations).
