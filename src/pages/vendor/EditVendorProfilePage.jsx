@@ -5,7 +5,7 @@ import { getVendors, createVendorProfile, updateVendorProfile } from '../../api/
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorBanner from '../../components/common/ErrorBanner';
 import Toast from '../../components/common/Toast';
-import { Sparkles, ArrowLeft, Building, DollarSign, Image as ImageIcon, FileText, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowLeft, Building, DollarSign, Image as ImageIcon, FileText, Phone, MapPin, Award, User, CheckCircle2, CalendarDays, X } from 'lucide-react';
 
 const EditVendorProfilePage = () => {
   const { user } = useAuth();
@@ -17,8 +17,15 @@ const EditVendorProfilePage = () => {
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
   const [description, setDescription] = useState('');
+  const [phoneNo, setPhoneNo] = useState('');
+  const [gender, setGender] = useState('male');
+  const [location, setLocation] = useState('');
+  const [experienceYears, setExperienceYears] = useState('3');
+  const [available, setAvailable] = useState(true);
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [portfolioImages, setPortfolioImages] = useState([]);
+  const [blockedDates, setBlockedDates] = useState([]);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,7 +40,6 @@ const EditVendorProfilePage = () => {
       try {
         const response = await getVendors();
         if (response.success && response.data) {
-          // Find the vendor linked to the current logged-in user
           const myProfile = response.data.find(v => v.userId === user?.id || v.userId === user?.email);
           if (myProfile) {
             setVendorId(myProfile.id);
@@ -42,7 +48,16 @@ const EditVendorProfilePage = () => {
             setPriceMin(myProfile.priceRange?.min?.toString() || '');
             setPriceMax(myProfile.priceRange?.max?.toString() || '');
             setDescription(myProfile.description || '');
+            setPhoneNo(myProfile.phoneNo || user?.phoneNo || '');
+            setGender(myProfile.gender || user?.gender || 'male');
+            setLocation(myProfile.location || '');
+            setExperienceYears(myProfile.experienceYears?.toString() || '3');
+            setAvailable(myProfile.available !== false);
             setPortfolioImages(myProfile.portfolioImages || []);
+            setBlockedDates(myProfile.blockedDates || []);
+          } else {
+            setPhoneNo(user?.phoneNo || '');
+            setGender(user?.gender || 'male');
           }
         }
       } catch (err) {
@@ -70,9 +85,9 @@ const EditVendorProfilePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!businessName || !priceMin || !priceMax || !description) {
+    if (!businessName || !priceMin || !priceMax || !description || !phoneNo) {
       setToastType('error');
-      setToastMsg('Please fill in all required fields.');
+      setToastMsg('Please fill in all required fields including Phone Number.');
       return;
     }
 
@@ -91,22 +106,26 @@ const EditVendorProfilePage = () => {
       category,
       priceRange: { min, max },
       description,
-      portfolioImages
+      phoneNo,
+      gender,
+      location,
+      experienceYears: Number(experienceYears) || 0,
+      available,
+      portfolioImages,
+      blockedDates
     };
 
     try {
       let res;
       if (vendorId) {
-        // Update profile
         res = await updateVendorProfile(vendorId, payload);
       } else {
-        // Create profile
         res = await createVendorProfile(payload);
       }
 
       if (res.success) {
         setToastType('success');
-        setToastMsg('Profile saved successfully!');
+        setToastMsg('Vendor Business Profile saved successfully!');
         setTimeout(() => navigate('/vendor/dashboard'), 1500);
       } else {
         setToastType('error');
@@ -125,171 +144,258 @@ const EditVendorProfilePage = () => {
   if (error) return <ErrorBanner message={error} />;
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {toastMsg && <Toast message={toastMsg} type={toastType} onClose={() => setToastMsg('')} />}
 
-      {/* Back button */}
       <div>
         <button
           onClick={() => navigate('/vendor/dashboard')}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-650 hover:text-slate-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </button>
       </div>
 
-      {/* Title */}
-      <div className="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div className="flex items-center gap-2 text-violet-650 font-bold text-sm mb-2">
+      <div className="glass-card p-8 border border-[var(--border-color)]">
+        <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm mb-2">
           <Sparkles className="w-4 h-4" />
-          <span>Vendor Settings</span>
+          <span>Vendor Business Profile Settings</span>
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-905 tracking-tight">
-          {vendorId ? 'Manage Marketplace Profile' : 'Register Service Profile'}
+        <h1 className="text-3xl font-extrabold text-[var(--text-main)] tracking-tight">
+          {vendorId ? 'Edit Marketplace Profile' : 'Register Service Profile'}
         </h1>
-        <p className="text-slate-500 mt-1">Provide business details, categories, rates, and portfolio images to attract event planners.</p>
+        <p className="text-[var(--text-muted)] mt-1">Provide business details, phone number, gender, service location, rates, and portfolio images to showcase your business to event planners.</p>
       </div>
 
-      {/* Form Card */}
-      <div className="bg-white py-8 px-6 shadow-sm border border-slate-200/80 rounded-2xl sm:px-10">
+      <div className="glass-card py-8 px-6 border border-[var(--border-color)] sm:px-10">
         <form className="space-y-6" onSubmit={handleSubmit}>
           {/* Business Name */}
           <div>
-            <label htmlFor="businessName" className="block text-sm font-semibold text-slate-700">
+            <label htmlFor="businessName" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
               Business Name *
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Building className="w-4 h-4" />
-              </div>
+            <div className="relative">
               <input
                 id="businessName"
                 type="text"
                 required
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
-                className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-900 transition-all text-xs"
-                placeholder="e.g. Royal Catering Hub"
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
+                placeholder="e.g. Royal Grand Catering & Decor"
               />
+              <Building className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
             </div>
           </div>
 
-          {/* Category Selector */}
-          <div>
-            <label htmlFor="category" className="block text-sm font-semibold text-slate-700">
-              Service Category *
-            </label>
-            <select
-              id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mt-1 block w-full px-4 py-3 border border-slate-200 rounded-xl bg-white text-xs text-slate-950 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
-            >
-              <option value="VENUE">VENUE (Event Venue)</option>
-              <option value="CATERING">CATERING (Catering & Food)</option>
-              <option value="DECOR">DECOR (Decorations & Styling)</option>
-              <option value="AV">AV (Audio-Visual & Sound)</option>
-              <option value="OTHER">OTHER (Other Services)</option>
-            </select>
+          {/* Phone & Gender */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="phoneNo" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Contact Phone Number *
+              </label>
+              <div className="relative">
+                <input
+                  id="phoneNo"
+                  type="tel"
+                  required
+                  value={phoneNo}
+                  onChange={(e) => setPhoneNo(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
+                  placeholder="+91 9876543210"
+                />
+                <Phone className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="gender" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Gender *
+              </label>
+              <div className="relative">
+                <select
+                  id="gender"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other / Prefer not to say</option>
+                </select>
+                <User className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Location & Experience */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="location" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Service Location / City *
+              </label>
+              <div className="relative">
+                <input
+                  id="location"
+                  type="text"
+                  required
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
+                  placeholder="e.g. Bangalore, Karnataka"
+                />
+                <MapPin className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="experienceYears" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Experience (Years)
+              </label>
+              <div className="relative">
+                <input
+                  id="experienceYears"
+                  type="number"
+                  min="0"
+                  value={experienceYears}
+                  onChange={(e) => setExperienceYears(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
+                  placeholder="e.g. 5"
+                />
+                <Award className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Category & Availability */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="category" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Service Category *
+              </label>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-semibold"
+              >
+                <option value="VENUE">VENUE (Event Hall & Grounds)</option>
+                <option value="CATERING">CATERING (Catering & Food)</option>
+                <option value="DECOR">DECOR (Styling & Decorations)</option>
+                <option value="AV">AV (Audio, Visual & DJ)</option>
+                <option value="OTHER">OTHER (Other Event Services)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Booking Availability Status
+              </label>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAvailable(!available)}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
+                    available 
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{available ? 'Available for New Events' : 'Currently Fully Booked'}</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Price Range */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="priceMin" className="block text-sm font-semibold text-slate-700">
-                Minimum Pricing (INR) *
+              <label htmlFor="priceMin" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Min Price (₹) *
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign className="w-4 h-4" />
-                </div>
+              <div className="relative">
                 <input
                   id="priceMin"
                   type="number"
                   required
                   value={priceMin}
                   onChange={(e) => setPriceMin(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-900 transition-all text-xs"
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
                   placeholder="e.g. 15000"
                 />
+                <DollarSign className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
               </div>
             </div>
             <div>
-              <label htmlFor="priceMax" className="block text-sm font-semibold text-slate-700">
-                Maximum Pricing (INR) *
+              <label htmlFor="priceMax" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+                Max Price (₹) *
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign className="w-4 h-4" />
-                </div>
+              <div className="relative">
                 <input
                   id="priceMax"
                   type="number"
                   required
                   value={priceMax}
                   onChange={(e) => setPriceMax(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-900 transition-all text-xs"
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
                   placeholder="e.g. 80000"
                 />
+                <DollarSign className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
               </div>
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-semibold text-slate-700">
-              Business Description *
+            <label htmlFor="description" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+              Business Overview & Services Offered *
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute top-3 left-3 pointer-events-none text-slate-400">
-                <FileText className="w-4 h-4" />
-              </div>
+            <div className="relative">
               <textarea
                 id="description"
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-900 transition-all text-xs resize-none"
-                placeholder="Describe your services, specializations, and booking policies..."
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11 resize-none"
+                placeholder="Describe your service packages, specialized menus, equipment, team size, and booking terms..."
               />
+              <FileText className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
             </div>
           </div>
 
           {/* Portfolio Images */}
           <div>
-            <label className="block text-sm font-semibold text-slate-750">
+            <label className="block text-sm font-semibold text-[var(--text-main)] mb-1">
               Portfolio Image URLs
             </label>
-            <div className="flex gap-2 mt-1">
-              <div className="relative flex-1 rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <ImageIcon className="w-4 h-4" />
-                </div>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
                 <input
                   type="url"
                   value={imageUrlInput}
                   onChange={(e) => setImageUrlInput(e.target.value)}
-                  className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-900 transition-all text-xs"
-                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all pl-11"
+                  placeholder="https://images.unsplash.com/photo-..."
                 />
+                <ImageIcon className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
               </div>
               <button
                 type="button"
                 onClick={handleAddImage}
-                className="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 border border-slate-250 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-sm"
+                className="px-5 py-3 bg-[var(--bg-surface)] hover:bg-[var(--border-color)] border border-[var(--border-color)] text-[var(--text-main)] font-bold text-sm rounded-xl transition-all"
               >
                 Add Image
               </button>
             </div>
 
-            {/* Selected Images Chips */}
             {portfolioImages.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                 {portfolioImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-video bg-slate-50 border border-slate-150 rounded-xl overflow-hidden group">
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  <div key={idx} className="relative aspect-video bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl overflow-hidden group">
+                    <img src={img} alt="Portfolio" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(idx)}
@@ -303,12 +409,84 @@ const EditVendorProfilePage = () => {
             )}
           </div>
 
-          {/* Submit */}
+          {/* Availability Calendar */}
           <div>
+            <label className="block text-sm font-semibold text-[var(--text-main)] mb-3 flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-emerald-400" />
+              Availability Calendar — Mark Blocked Dates
+            </label>
+            <p className="text-xs text-[var(--text-muted)] mb-4">Click dates to mark as unavailable. Click again to unblock. Green = free, Red = blocked.</p>
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <button type="button" onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() - 1); return d; })} className="px-3 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--border-color)] border border-[var(--border-color)] rounded-lg text-xs font-bold text-[var(--text-main)] transition-all">← Prev</button>
+                <span className="text-sm font-bold text-[var(--text-main)]">{calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+                <button type="button" onClick={() => setCalendarMonth(prev => { const d = new Date(prev); d.setMonth(d.getMonth() + 1); return d; })} className="px-3 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--border-color)] border border-[var(--border-color)] rounded-lg text-xs font-bold text-[var(--text-main)] transition-all">Next →</button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d}>{d}</div>)}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {(() => {
+                  const year = calendarMonth.getFullYear();
+                  const month = calendarMonth.getMonth();
+                  const firstDay = new Date(year, month, 1).getDay();
+                  const daysInMonth = new Date(year, month + 1, 0).getDate();
+                  const cells = [];
+                  for (let i = 0; i < firstDay; i++) cells.push(<div key={`empty-${i}`} />);
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                    const isBlocked = blockedDates.includes(dateStr);
+                    const today = new Date();
+                    const isPast = new Date(dateStr) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    cells.push(
+                      <button
+                        key={dateStr}
+                        type="button"
+                        disabled={isPast}
+                        onClick={() => {
+                          if (isBlocked) {
+                            setBlockedDates(prev => prev.filter(d => d !== dateStr));
+                          } else {
+                            setBlockedDates(prev => [...prev, dateStr]);
+                          }
+                        }}
+                        className={`aspect-square rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
+                          isPast ? 'text-[var(--text-muted)] opacity-30 cursor-not-allowed' :
+                          isBlocked ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30' :
+                          'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  }
+                  return cells;
+                })()}
+              </div>
+              {blockedDates.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+                  <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider mb-2">Blocked Dates ({blockedDates.length})</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {blockedDates.sort().map(d => (
+                      <span key={d} className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/30 rounded-lg text-[10px] font-mono font-bold">
+                        {d}
+                        <button type="button" onClick={() => setBlockedDates(prev => prev.filter(x => x !== d))}>
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-2">
             <button
               type="submit"
               disabled={saving}
-              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-violet-600 hover:bg-violet-750 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:bg-violet-400 disabled:cursor-not-allowed transition-all"
+              className="w-full btn-primary py-3.5 px-4 rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               {saving ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

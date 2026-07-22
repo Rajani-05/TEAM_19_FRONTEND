@@ -38,6 +38,9 @@ import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagementPage from '../pages/admin/UserManagementPage';
 import VendorModerationPage from '../pages/admin/VendorModerationPage';
 
+// Client authenticated pages
+import ClientDashboard from '../pages/client/ClientDashboard';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -81,6 +84,11 @@ const AppRoutes = () => {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<UserManagementPage />} />
             <Route path="/admin/vendors" element={<VendorModerationPage />} />
+          </Route>
+
+          {/* Client Sub-tree */}
+          <Route element={<RoleRoute allowedRoles={['CLIENT']} />}>
+            <Route path="/client/dashboard" element={<ClientDashboard />} />
           </Route>
 
         </Route>

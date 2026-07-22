@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createEvent } from '../../api/eventApi';
-import { Sparkles, Calendar, DollarSign, Mail, AlertCircle } from 'lucide-react';
+import { Sparkles, Calendar, DollarSign, Mail, AlertCircle, Tag } from 'lucide-react';
 import Toast from '../../components/common/Toast';
 
 const CreateEventPage = () => {
@@ -14,10 +14,27 @@ const CreateEventPage = () => {
 
   const navigate = useNavigate();
 
+  const servicePresets = [
+    { label: '🎂 Birthday Party', defaultTitle: "Grand Birthday Soiree & Party", defaultBudget: "150000" },
+    { label: '💍 Wedding & Reception', defaultTitle: "Royal Palace Wedding & Reception", defaultBudget: "350000" },
+    { label: '🏢 Corporate Summit', defaultTitle: "Annual Corporate Tech Gala", defaultBudget: "250000" },
+    { label: '👶 Baby Shower', defaultTitle: "Bespoke Baby Shower & Naming", defaultBudget: "80000" },
+    { label: '🎧 DJ Night & Concert', defaultTitle: "Sonic Boom DJ Concert Night", defaultBudget: "200000" },
+    { label: '🥂 Anniversary Gala', defaultTitle: "Silver Jubilee Anniversary Party", defaultBudget: "180000" },
+  ];
+
+  const applyPreset = (preset) => {
+    setTitle(preset.defaultTitle);
+    setTargetBudget(preset.defaultBudget);
+    if (!clientEmail) {
+      setClientEmail("rishika@example.com");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !targetBudget || !clientEmail) {
-      setErrorMsg('Please fill in all fields.');
+      setErrorMsg('Please fill in all required fields.');
       return;
     }
 
@@ -32,10 +49,8 @@ const CreateEventPage = () => {
 
     try {
       const response = await createEvent(title, budgetNum, clientEmail);
-      // wrapper: { success: true, message: "...", data: event }
       if (response.success && response.data) {
-        setToastMsg('Event created successfully!');
-        // Redirect to Event Builder Page
+        setToastMsg('Event proposal created successfully!');
         navigate(`/planner/event-builder/${response.data.id}`);
       } else {
         setErrorMsg(response.message || 'Failed to create event. Please try again.');
@@ -53,19 +68,39 @@ const CreateEventPage = () => {
       {toastMsg && <Toast message={toastMsg} onClose={() => setToastMsg('')} />}
 
       {/* Header Panel */}
-      <div className="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div className="flex items-center gap-2 text-violet-600 font-semibold text-sm mb-2">
+      <div className="glass-card p-8 border border-[var(--border-color)]">
+        <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-2">
           <Sparkles className="w-5 h-5" />
-          <span>New Workspace</span>
+          <span>Bespoke Package Builder</span>
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Create Event Proposal</h1>
-        <p className="text-slate-500 mt-1">Set up a new client proposal, assign a target budget cap, and build your vendor package.</p>
+        <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">Create Event Proposal</h1>
+        <p className="text-[var(--text-muted)] mt-1 text-sm">Select an event service type, assign a target budget cap, and bundle your venue, caterers, and decorators.</p>
+      </div>
+
+      {/* Quick Presets */}
+      <div className="glass-card p-6 border border-[var(--border-color)] space-y-3">
+        <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block flex items-center gap-1.5">
+          <Tag className="w-3.5 h-3.5 text-pink-400" />
+          Quick Event Service Presets:
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {servicePresets.map((preset, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className="px-3 py-1.5 bg-[var(--bg-surface)] hover:bg-[var(--border-color)] border border-[var(--border-color)] rounded-xl text-xs font-bold text-[var(--text-main)] transition-all hover:scale-105"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Form Card */}
-      <div className="bg-white py-8 px-6 shadow-sm border border-slate-200/80 rounded-2xl sm:px-10">
+      <div className="glass-card py-8 px-6 border border-[var(--border-color)] sm:px-10">
         {errorMsg && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-150 rounded-xl flex items-start gap-3 text-red-700 text-sm">
+          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-start gap-3 text-rose-400 text-sm">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
@@ -74,13 +109,10 @@ const CreateEventPage = () => {
         <form className="space-y-6" onSubmit={handleSubmit}>
           {/* Title */}
           <div>
-            <label htmlFor="title" className="block text-sm font-semibold text-slate-750">
-              Event Title
+            <label htmlFor="title" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+              Event Title & Package Service *
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Calendar className="w-4 h-4" />
-              </div>
+            <div className="relative">
               <input
                 id="title"
                 name="title"
@@ -88,21 +120,19 @@ const CreateEventPage = () => {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-slate-900 transition-all text-sm"
-                placeholder="e.g. Bhumika's Wedding Gala"
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all pl-11 text-sm"
+                placeholder="e.g. Rishika's Grand Birthday Fiesta"
               />
+              <Calendar className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
             </div>
           </div>
 
           {/* Target Budget */}
           <div>
-            <label htmlFor="targetBudget" className="block text-sm font-semibold text-slate-750">
-              Target Budget (INR)
+            <label htmlFor="targetBudget" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+              Target Budget (INR) *
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 font-bold text-sm">
-                <DollarSign className="w-4 h-4" />
-              </div>
+            <div className="relative">
               <input
                 id="targetBudget"
                 name="targetBudget"
@@ -110,21 +140,19 @@ const CreateEventPage = () => {
                 required
                 value={targetBudget}
                 onChange={(e) => setTargetBudget(e.target.value)}
-                className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-slate-900 transition-all text-sm"
-                placeholder="e.g. 500000"
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all pl-11 text-sm font-mono font-bold"
+                placeholder="e.g. 150000"
               />
+              <DollarSign className="w-5 h-5 text-emerald-400 absolute left-3.5 top-3.5" />
             </div>
           </div>
 
           {/* Client Email */}
           <div>
-            <label htmlFor="clientEmail" className="block text-sm font-semibold text-slate-750">
-              Client Email Address
+            <label htmlFor="clientEmail" className="block text-sm font-semibold text-[var(--text-main)] mb-1">
+              Client Email Address *
             </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-4 h-4" />
-              </div>
+            <div className="relative">
               <input
                 id="clientEmail"
                 name="clientEmail"
@@ -132,23 +160,24 @@ const CreateEventPage = () => {
                 required
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
-                className="appearance-none block w-full pl-10 pr-4 py-3 border border-slate-205 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-slate-900 transition-all text-sm"
-                placeholder="client@domain.com"
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl shadow-sm text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all pl-11 text-sm"
+                placeholder="rishika@example.com"
               />
+              <Mail className="w-5 h-5 text-[var(--text-muted)] absolute left-3.5 top-3.5" />
             </div>
           </div>
 
           {/* Action Button */}
-          <div>
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-violet-500 disabled:bg-violet-400 disabled:cursor-not-allowed transition-all"
+              className="w-full btn-primary py-3.5 px-4 rounded-xl text-sm font-bold disabled:opacity-50 transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
-                'Create Proposal & Open Builder'
+                'Create Proposal & Open Package Builder'
               )}
             </button>
           </div>

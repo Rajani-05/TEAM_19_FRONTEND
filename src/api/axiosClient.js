@@ -22,7 +22,9 @@ export const registerLogoutCallback = (callback) => {
 
 axiosClient.interceptors.request.use(
   (config) => {
-    if (token) {
+    const isPublicRoute = config.url.includes('/client-view') || config.url.includes('/api/auth');
+    const isClientPage = window.location.pathname.startsWith('/client-view');
+    if (token && !isPublicRoute && !isClientPage) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;

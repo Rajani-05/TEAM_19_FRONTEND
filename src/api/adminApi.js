@@ -14,3 +14,8 @@ export const updateVendorStatus = async (id, status) => {
   const response = await axiosClient.patch(`/api/admin/vendors/${id}/status`, { status });
   return response.data; // returns { success, message, data: updatedVendor }
 };
+
+export const deleteUser = async (id) => {
+  const response = await axiosClient.delete(`/api/admin/users/${id}`);
+  return response.data;
+};

@@ -3,11 +3,15 @@ import { getUsers, getPendingVendors, updateVendorStatus } from '../../api/admin
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorBanner from '../../components/common/ErrorBanner';
 import Toast from '../../components/common/Toast';
-import { Shield, Users, Building, Settings, Check, X, ArrowRight } from 'lucide-react';
+import { LogoIcon } from '../../components/common/Logo';
+import { 
+  Shield, Users, Building, Settings, Check, X, ArrowRight, 
+  DollarSign, Activity, Calendar, ShieldCheck, Phone, CheckCircle2 
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
-  const [usersCount, setUsersCount] = useState(0);
+  const [users, setUsers] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +29,7 @@ const AdminDashboard = () => {
       ]);
 
       if (usersRes.success && usersRes.data) {
-        setUsersCount(usersRes.data.length);
+        setUsers(usersRes.data);
       }
       if (vendorsRes.success && vendorsRes.data) {
         setPendingVendors(vendorsRes.data);
@@ -47,9 +51,10 @@ const AdminDashboard = () => {
       const res = await updateVendorStatus(vendorId, status);
       if (res.success) {
         setToastType('success');
-        setToastMsg(`Application successfully ${status.toLowerCase()}ed!`);
-        // Remove item from active UI list
+        setToastMsg(`Vendor listing ${status.toLowerCase()}ed successfully!`);
         setPendingVendors(prev => prev.filter(v => v.id !== vendorId));
+        // Refresh users state to update any roles if affected
+        fetchDashboardStats();
       } else {
         setToastType('error');
         setToastMsg(res.message || 'Action failed.');
@@ -64,78 +69,114 @@ const AdminDashboard = () => {
   if (loading) return <LoadingSpinner size="large" />;
   if (error) return <ErrorBanner message={error} onRetry={fetchDashboardStats} />;
 
+  // Calculate detailed analytics for admin self-analysis
+  const plannersCount = users.filter(u => u.role === 'PLANNER').length;
+  const vendorsCount = users.filter(u => u.role === 'VENDOR').length;
+  const clientsCount = users.filter(u => u.role === 'CLIENT').length;
+  const adminsCount = users.filter(u => u.role === 'ADMIN').length;
+
   return (
     <div className="space-y-6">
       {toastMsg && <Toast message={toastMsg} type={toastType} onClose={() => setToastMsg('')} />}
 
       {/* Header Banner */}
-      <div className="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">System Control Center</h1>
-        <p className="text-slate-500 mt-1">Monitor marketplace platforms, verify vendor submissions, and audit user roles.</p>
+      <div className="glass-card p-8 border border-[var(--border-color)]">
+        <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">System Control Center</h1>
+        <p className="text-[var(--text-muted)] mt-1 text-sm md:text-base">Monitor platform operations, evaluate vendor listing request queues, and check account analytics.</p>
       </div>
 
-      {/* Statistic KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* KPI 1 */}
-        <Link to="/admin/users" className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4 hover:border-violet-300 hover:shadow-md transition-all">
-          <div className="w-12 h-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-            <Users className="w-6 h-6" />
+      {/* Analytic KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="glass-card p-6 border border-[var(--border-color)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Total Accounts</span>
+            <Users className="w-5 h-5 text-indigo-400" />
           </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Registered Users</span>
-            <span className="text-2xl font-bold text-slate-800">{usersCount} accounts</span>
-          </div>
-        </Link>
+          <span className="text-3xl font-black text-[var(--text-main)] mt-2 block">{users.length}</span>
+          <span className="text-[10px] text-emerald-400 mt-1 block">Live registrations</span>
+        </div>
 
-        {/* KPI 2 */}
-        <Link to="/admin/vendors" className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4 hover:border-violet-300 hover:shadow-md transition-all">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-            <Building className="w-6 h-6" />
+        <div className="glass-card p-6 border border-[var(--border-color)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Pending Approvals</span>
+            <Building className="w-5 h-5 text-pink-400" />
           </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending Approvals</span>
-            <span className="text-2xl font-bold text-slate-805">{pendingVendors.length} applications</span>
-          </div>
-        </Link>
+          <span className="text-3xl font-black text-[var(--text-main)] mt-2 block">{pendingVendors.length}</span>
+          <span className="text-[10px] text-amber-400 mt-1 block">Requires review</span>
+        </div>
 
-        {/* KPI 3 */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-            <Settings className="w-6 h-6" />
+        <div className="glass-card p-6 border border-[var(--border-color)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">Escrow Volumes</span>
+            <DollarSign className="w-5 h-5 text-emerald-400" />
           </div>
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">System Status</span>
-            <span className="text-sm font-bold text-emerald-700">Healthy (200 OK)</span>
+          <span className="text-3xl font-black text-[var(--text-main)] mt-2 block">₹4.82 Lakhs</span>
+          <span className="text-[10px] text-emerald-400 mt-1 block">Simulated volume</span>
+        </div>
+
+        <div className="glass-card p-6 border border-[var(--border-color)]">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">System Health</span>
+            <Activity className="w-5 h-5 text-emerald-400" />
           </div>
+          <span className="text-lg font-black text-[var(--text-main)] mt-2.5 block">200 OK</span>
+          <span className="text-[10px] text-emerald-400 mt-1 block">Backend responding</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Navigation Blocks */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-violet-500" />
-            Administrative Panels
+      {/* User Roles Breakdown (Admin Self-Analysis Section) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="glass-card p-6 border border-[var(--border-color)] lg:col-span-1 space-y-4">
+          <h2 className="text-lg font-bold text-[var(--text-main)] flex items-center gap-2">
+            <Shield className="w-5 h-5 text-emerald-400" />
+            Roles Distribution
           </h2>
+          <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+            Role counts within the event marketplace database:
+          </p>
+
           <div className="space-y-3">
-            <Link to="/admin/users" className="block p-4 border border-slate-100 hover:border-violet-250 hover:bg-violet-50/5 rounded-xl transition-all">
-              <h3 className="font-semibold text-slate-800 text-sm">Manage Users</h3>
-              <p className="text-xs text-slate-500 mt-1">Audit credentials, roles, and dates.</p>
-            </Link>
-            <Link to="/admin/vendors" className="block p-4 border border-slate-100 hover:border-violet-255 hover:bg-violet-50/5 rounded-xl transition-all">
-              <h3 className="font-semibold text-slate-800 text-sm">Moderate Vendor Submissions</h3>
-              <p className="text-xs text-slate-500 mt-1">Evaluate and verify listing requests.</p>
-            </Link>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-[var(--text-muted)] font-semibold flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
+                Event Planners
+              </span>
+              <span className="font-extrabold text-[var(--text-main)]">{plannersCount} ({((plannersCount/Math.max(users.length,1))*100).toFixed(0)}%)</span>
+            </div>
+
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-[var(--text-muted)] font-semibold flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-pink-500 rounded-full"></span>
+                Service Vendors
+              </span>
+              <span className="font-extrabold text-[var(--text-main)]">{vendorsCount} ({((vendorsCount/Math.max(users.length,1))*100).toFixed(0)}%)</span>
+            </div>
+
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-[var(--text-muted)] font-semibold flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span>
+                End Clients
+              </span>
+              <span className="font-extrabold text-[var(--text-main)]">{clientsCount} ({((clientsCount/Math.max(users.length,1))*100).toFixed(0)}%)</span>
+            </div>
+
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-[var(--text-muted)] font-semibold flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
+                Administrators
+              </span>
+              <span className="font-extrabold text-[var(--text-main)]">{adminsCount} ({((adminsCount/Math.max(users.length,1))*100).toFixed(0)}%)</span>
+            </div>
           </div>
         </div>
 
-        {/* Quick Pending Table */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        {/* Quick Moderation Queue */}
+        <div className="glass-card p-6 border border-[var(--border-color)] lg:col-span-2 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Pending Application Approvals</h2>
+              <h2 className="text-lg font-bold text-[var(--text-main)]">Moderation Queue</h2>
               {pendingVendors.length > 0 && (
-                <Link to="/admin/vendors" className="text-xs font-bold text-violet-600 hover:text-violet-755 inline-flex items-center gap-1">
+                <Link to="/admin/vendors" className="text-xs font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1">
                   View All
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
@@ -143,18 +184,19 @@ const AdminDashboard = () => {
             </div>
 
             {pendingVendors.length === 0 ? (
-              <p className="text-xs text-slate-500 leading-normal py-6 text-center">
-                All registered partners have been moderated. The approval queue is currently empty.
+              <p className="text-xs text-[var(--text-muted)] leading-normal py-10 text-center border border-dashed border-[var(--border-color)] rounded-xl">
+                The approval queue is empty. All vendor profiles have been moderated.
               </p>
             ) : (
-              <div className="space-y-3 overflow-y-auto max-h-56 pr-1">
-                {pendingVendors.slice(0, 3).map((item) => (
-                  <div key={item.id} className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 flex justify-between items-center gap-3">
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {pendingVendors.map((item) => (
+                  <div key={item.id} className="p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] flex justify-between items-center gap-3">
                     <div className="truncate flex-1">
-                      <h4 className="font-bold text-slate-800 text-xs truncate">{item.businessName}</h4>
-                      <span className="text-[9px] uppercase font-semibold text-slate-450 tracking-wider block mt-0.5">
-                        Category: {item.category}
-                      </span>
+                      <h4 className="font-bold text-[var(--text-main)] text-xs truncate">{item.businessName}</h4>
+                      <div className="flex items-center gap-3 text-[10px] text-[var(--text-muted)] mt-1">
+                        <span className="text-emerald-450 uppercase">Category: {item.category}</span>
+                        {item.phoneNo && <span>Tel: {item.phoneNo}</span>}
+                      </div>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
                       <button
@@ -166,7 +208,7 @@ const AdminDashboard = () => {
                       </button>
                       <button
                         onClick={() => handleQuickModerate(item.id, 'REJECTED')}
-                        className="p-1.5 bg-red-655 bg-red-650 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors"
                         title="Reject"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -177,6 +219,21 @@ const AdminDashboard = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Admin Action Links */}
+      <div className="glass-card p-6 border border-[var(--border-color)] space-y-4">
+        <h2 className="text-lg font-bold text-[var(--text-main)]">Administrative Quick Links</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link to="/admin/users" className="block p-4 bg-[var(--bg-surface)] border border-[var(--border-color)] hover:border-indigo-500/50 rounded-xl transition-all">
+            <h3 className="font-bold text-[var(--text-main)] text-sm">Account Operations Control</h3>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Audit complete credentials, role levels, user names, phone numbers, and genders.</p>
+          </Link>
+          <Link to="/admin/vendors" className="block p-4 bg-[var(--bg-surface)] border border-[var(--border-color)] hover:border-indigo-500/50 rounded-xl transition-all">
+            <h3 className="font-bold text-[var(--text-main)] text-sm">Full Vendor Directory Moderation</h3>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Review approved and rejected listings, evaluate pricing bounds and description reviews.</p>
+          </Link>
         </div>
       </div>
     </div>

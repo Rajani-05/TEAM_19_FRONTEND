@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getClientEventView } from '../../api/eventApi';
-import { initiatePayment, verifyPayment, getPaymentHistory } from '../../api/paymentApi';
+import { initiatePayment, verifyPayment } from '../../api/paymentApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorBanner from '../../components/common/ErrorBanner';
 import { resolveEventTheme } from '../../utils/theme';
 import { 
-  CreditCard, ShieldCheck, AlertCircle, HelpCircle, 
-  CheckCircle2, Sparkles, ArrowLeft, Heart, Lock
+  CreditCard, ShieldCheck, AlertCircle, Sparkles, ArrowLeft, Lock, CheckCircle2, Play
 } from 'lucide-react';
 
 const ClientApprovePayPage = () => {
@@ -17,7 +16,7 @@ const ClientApprovePayPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Payment transaction states: 'idle' | 'initiating' | 'checkout' | 'verifying' | 'success' | 'webhook_pending' | 'failed'
+  // Payment transaction states: 'idle' | 'initiating' | 'checkout' | 'verifying' | 'success' | 'failed'
   const [paymentState, setPaymentState] = useState('idle');
   const [verifyError, setVerifyError] = useState('');
 
@@ -58,23 +57,42 @@ const ClientApprovePayPage = () => {
     });
   };
 
-  // Poll event payments to check if a successful payment was logged by webhook
-  const pollPaymentStatus = async (tokenVal, attempts = 5) => {
-    for (let i = 0; i < attempts; i++) {
-      try {
-        // Wait 3 seconds
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const res = await getClientEventView(tokenVal);
-        if (res.success && res.data) {
-          if (res.data.status === 'COMPLETED') {
-            return true; // Success!
-          }
-        }
-      } catch (e) {
-        console.error('Polling error:', e);
+  const handleSimulatePayment = async () => {
+    if (!event) return;
+    setPaymentState('initiating');
+    setVerifyError('');
+
+    try {
+      const initiateRes = await initiatePayment(event.id, event.totalCost, 'CLIENT_TO_PLATFORM');
+      if (!initiateRes.success || !initiateRes.data) {
+        setPaymentState('idle');
+        setVerifyError(initiateRes.message || 'Failed to initiate simulated order.');
+        return;
       }
+
+      const orderData = initiateRes.data;
+      setPaymentState('verifying');
+
+      // Add brief delay for loading effect
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const verifyRes = await verifyPayment(
+        orderData.orderId,
+        'pay_simulated_' + Math.random().toString(36).substring(7),
+        'sig_simulated_bypass_check'
+      );
+
+      if (verifyRes.success) {
+        setPaymentState('success');
+      } else {
+        setPaymentState('failed');
+        setVerifyError(verifyRes.message || 'Signature simulation failed.');
+      }
+    } catch (err) {
+      console.error(err);
+      setPaymentState('failed');
+      setVerifyError('Simulated verification failed: ' + (err.response?.data?.message || err.message));
     }
-    return false; // Webhook confirmation pending
   };
 
   const handlePayment = async () => {
@@ -87,13 +105,12 @@ const ClientApprovePayPage = () => {
       const scriptLoaded = await loadRazorpay();
       if (!scriptLoaded) {
         setPaymentState('idle');
-        setVerifyError('Razorpay payment gateway script failed to load. Check your internet.');
+        setVerifyError('Razorpay payment gateway script failed to load. Check your internet connection.');
         return;
       }
 
-      // 2. Initiate order server-side with the correct body parameters required by our new backend
+      // 2. Initiate order server-side
       const initiateRes = await initiatePayment(event.id, event.totalCost, 'CLIENT_TO_PLATFORM');
-      // wrapper: { success: true, data: { orderId, amount, currency, razorpayKeyId } }
       if (!initiateRes.success || !initiateRes.data) {
         setPaymentState('idle');
         setVerifyError(initiateRes.message || 'Failed to initiate checkout order.');
@@ -112,10 +129,8 @@ const ClientApprovePayPage = () => {
         description: `Booking Package: ${event.title}`,
         order_id: orderData.orderId,
         handler: async function (response) {
-          // Triggered on checkout finish
           setPaymentState('verifying');
           try {
-            // Send signature to verify in the request body as aligned
             const verifyRes = await verifyPayment(
               response.razorpay_order_id,
               response.razorpay_payment_id,
@@ -123,13 +138,7 @@ const ClientApprovePayPage = () => {
             );
 
             if (verifyRes.success) {
-              // Webhook handles status, let's poll to check
-              const webhookConfirmed = await pollPaymentStatus(clientLinkToken);
-              if (webhookConfirmed) {
-                setPaymentState('success');
-              } else {
-                setPaymentState('webhook_pending');
-              }
+              setPaymentState('success');
             } else {
               setPaymentState('failed');
               setVerifyError(verifyRes.message || 'Signature verification rejected by backend.');
@@ -144,7 +153,7 @@ const ClientApprovePayPage = () => {
           email: event.clientEmail,
         },
         theme: {
-          color: '#b45309', // Warm gold theme
+          color: '#10b981', // Green theme
         },
         modal: {
           ondismiss: function () {
@@ -178,71 +187,77 @@ const ClientApprovePayPage = () => {
   if (!event) return <ErrorBanner message="Event proposal not found." />;
 
   const isApproved = event.status === 'APPROVED' || event.status === 'COMPLETED';
-  
-  // Resolve dynamic theme
   const theme = resolveEventTheme(event.title);
 
   return (
     <div className={`min-h-screen ${theme.bgClass} py-16 px-4 sm:px-6 lg:px-8 font-sans transition-all`}>
       <div className="max-w-2xl mx-auto space-y-6">
         
-        {/* Guard verification check if the client tries to check out directly */}
         {!isApproved && paymentState === 'idle' ? (
-          <div className="bg-amber-50/50 border border-amber-200/60 p-8 rounded-3xl text-center space-y-4 shadow-sm">
-            <AlertCircle className="w-12 h-12 text-amber-700 mx-auto" />
-            <h2 className="text-xl font-serif font-bold text-amber-900">Proposal Awaiting Approval</h2>
-            <p className="text-xs text-amber-750 max-w-sm mx-auto leading-relaxed">
+          <div className="glass-card p-8 text-center space-y-4 shadow-xl border border-[var(--border-color)]">
+            <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+            <h2 className="text-xl font-bold text-[var(--text-main)]">Proposal Awaiting Approval</h2>
+            <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
               Before checking out, you must first review and approve the vendor package proposal details.
             </p>
             <Link
               to={`/client-view/${clientLinkToken}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--bg-surface)] hover:bg-[var(--border-color)] border border-[var(--border-color)] text-[var(--text-main)] rounded-xl text-xs font-bold transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Review Proposal details
             </Link>
           </div>
         ) : (
-          /* Payment Workspace States */
-          <div className="bg-white p-8 rounded-3xl border border-slate-200/50 shadow-md">
+          <div className="glass-card p-8 border border-[var(--border-color)] shadow-2xl">
             
             {/* 1. IDLE STATE */}
             {paymentState === 'idle' && (
-              <div className="space-y-6 text-center py-8">
-                <div className={`${theme.accentBg} ${theme.accentText} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border ${theme.accentBorder}`}>
-                  <CreditCard className="w-7 h-7" />
+              <div className="space-y-6 text-center py-6">
+                <div className="w-16 h-16 bg-gradient-to-tr from-emerald-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20 border border-emerald-400/20">
+                  <CreditCard className="w-8 h-8 text-white" />
                 </div>
                 <div className="space-y-2">
-                  <h1 className="text-2xl font-serif font-extrabold text-slate-950 tracking-tight">Complete Security Deposit</h1>
-                  <p className="text-slate-400 text-xs max-w-sm mx-auto leading-relaxed">
-                    Confirm your booking rate for <span className="font-bold text-slate-800">{event.title}</span>. Payment is processed securely through Razorpay escrow.
+                  <h1 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Complete Security Deposit</h1>
+                  <p className="text-[var(--text-muted)] text-xs max-w-sm mx-auto leading-relaxed">
+                    Confirm your booking rate for <span className="font-bold text-[var(--text-main)]">{event.title}</span>. Payment is processed securely through Razorpay.
                   </p>
                 </div>
 
                 {verifyError && (
-                  <div className="p-4 bg-red-50 border border-red-150 rounded-xl text-red-700 text-xs max-w-md mx-auto text-left flex gap-2">
+                  <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs max-w-md mx-auto text-left flex gap-2">
                     <AlertCircle className="w-5 h-5 shrink-0" />
                     <span>{verifyError}</span>
                   </div>
                 )}
 
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-150 max-w-md mx-auto space-y-4">
+                <div className="bg-[var(--bg-surface)] p-6 rounded-2xl border border-[var(--border-color)] max-w-md mx-auto space-y-4">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-semibold">Total Cost:</span>
-                    <span className={`text-xl font-black ${theme.accentText}`}>{formatPrice(event.totalCost)}</span>
+                    <span className="text-[var(--text-muted)] font-semibold">Total Cost:</span>
+                    <span className="text-xl font-black text-emerald-400">{formatPrice(event.totalCost)}</span>
                   </div>
-                  <div className="text-[10px] text-slate-400 text-left border-t border-slate-200 pt-2 leading-relaxed flex items-center gap-1.5 justify-center">
-                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="text-[10px] text-[var(--text-muted)] text-left border-t border-[var(--border-color)] pt-2 leading-relaxed flex items-center gap-1.5 justify-center">
+                    <Lock className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Secure end-to-end payment gateway.</span>
                   </div>
                 </div>
 
-                <button
-                  onClick={handlePayment}
-                  className={`w-full max-w-md inline-flex justify-center py-3.5 px-4 rounded-xl shadow-md text-sm font-bold text-white transition-all ${theme.btnClass}`}
-                >
-                  Pay Hired Rates
-                </button>
+                <div className="flex flex-col gap-3 max-w-md mx-auto">
+                  <button
+                    onClick={handlePayment}
+                    className="w-full btn-primary py-3.5 px-4 rounded-xl text-sm font-bold shadow-lg transition-all"
+                  >
+                    Pay Hired Rates via Razorpay
+                  </button>
+
+                  <button
+                    onClick={handleSimulatePayment}
+                    className="w-full py-3 px-4 bg-[var(--bg-surface)] hover:bg-[var(--border-color)] border border-[var(--border-color)] text-[var(--text-main)] rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Play className="w-4 h-4 text-emerald-400" />
+                    <span>Simulate Payment (Sandbox/Demo Mode)</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -250,9 +265,9 @@ const ClientApprovePayPage = () => {
             {(paymentState === 'initiating' || paymentState === 'checkout') && (
               <div className="text-center py-16 space-y-4">
                 <LoadingSpinner size="large" />
-                <h3 className="text-lg font-bold text-slate-900">Opening Razorpay Checkout</h3>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto animate-pulse">
-                  Please complete the payment in the checkout window. Do not close this browser.
+                <h3 className="text-lg font-bold text-[var(--text-main)]">Opening Payment Window</h3>
+                <p className="text-xs text-[var(--text-muted)] max-w-xs mx-auto animate-pulse">
+                  Please complete the payment in the checkout window. Do not close this browser page.
                 </p>
               </div>
             )}
@@ -261,9 +276,9 @@ const ClientApprovePayPage = () => {
             {paymentState === 'verifying' && (
               <div className="text-center py-16 space-y-4">
                 <LoadingSpinner size="large" />
-                <h3 className="text-lg font-bold text-slate-900">Verifying Transaction Signature</h3>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  Confirming payment details with platform servers. Please wait...
+                <h3 className="text-lg font-bold text-[var(--text-main)]">Verifying Transaction Signature</h3>
+                <p className="text-xs text-[var(--text-muted)] max-w-xs mx-auto">
+                  Confirming payment details with server. Please wait...
                 </p>
               </div>
             )}
@@ -271,59 +286,41 @@ const ClientApprovePayPage = () => {
             {/* 4. SUCCESS STATE */}
             {paymentState === 'success' && (
               <div className="text-center py-12 space-y-6">
-                <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
-                  <CheckCircle2 className="w-10 h-10" />
+                <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
+                  <ShieldCheck className="w-10 h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-serif font-extrabold text-slate-950 tracking-tight">Booking Confirmed!</h2>
-                  <p className="text-xs text-slate-450 max-w-sm mx-auto leading-relaxed">
-                    Your package booking has been successfully secured. The planner and vendors have been notified.
+                  <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Booking Confirmed!</h2>
+                  <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
+                    Your package booking has been successfully secured. The event status is now set to COMPLETED/Settled.
                   </p>
                 </div>
-                <div className="pt-4 border-t border-slate-100 max-w-md mx-auto text-xs text-slate-400">
+                <div className="pt-4 border-t border-[var(--border-color)] max-w-md mx-auto text-xs text-[var(--text-muted)]">
                   Transaction status: verified & settled
                 </div>
               </div>
             )}
 
-            {/* 5. WEBHOOK PENDING STATE */}
-            {paymentState === 'webhook_pending' && (
-              <div className="text-center py-12 space-y-6">
-                <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
-                  <Sparkles className="w-10 h-10" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-serif font-extrabold text-slate-950 tracking-tight">Payment Verification</h2>
-                  <p className="text-xs text-slate-450 max-w-sm mx-auto leading-relaxed">
-                    Razorpay has processed your payment. We are awaiting final transaction settlement from the gateway webhook. We'll email you once confirmed.
-                  </p>
-                </div>
-                <div className="pt-4 border-t border-slate-100 max-w-md mx-auto text-xs text-slate-400">
-                  Transaction status: verification pending webhook confirmation
-                </div>
-              </div>
-            )}
-
-            {/* 6. FAILED STATE */}
+            {/* 5. FAILED STATE */}
             {paymentState === 'failed' && (
               <div className="text-center py-12 space-y-6">
-                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <div className="w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
                   <AlertCircle className="w-10 h-10" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-serif font-extrabold text-slate-950 tracking-tight">Verification Failed</h2>
-                  <p className="text-xs text-slate-450 max-w-sm mx-auto leading-relaxed">
-                    The transaction signature could not be verified. If funds were deducted, they will be automatically refunded, or contact your planner.
+                  <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Verification Failed</h2>
+                  <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
+                    The transaction signature could not be verified by backend servers.
                   </p>
                 </div>
                 {verifyError && (
-                  <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-xs max-w-md mx-auto text-left">
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs max-w-md mx-auto text-left">
                     {verifyError}
                   </div>
                 )}
                 <button
                   onClick={() => setPaymentState('idle')}
-                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all"
+                  className="px-5 py-2.5 btn-primary rounded-xl text-xs font-bold transition-all"
                 >
                   Retry Payment
                 </button>

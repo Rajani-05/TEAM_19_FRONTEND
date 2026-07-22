@@ -4,14 +4,25 @@ import { setAuthToken, registerLogoutCallback } from '../api/axiosClient';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (token) {
+      setAuthToken(token);
+    }
+  }, [token]);
 
   // Login handler
   const login = (newToken, userData) => {
     setToken(newToken);
     setUser(userData);
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('user', JSON.stringify(userData));
     setAuthToken(newToken);
   };
 
@@ -19,6 +30,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setAuthToken(null);
   };
 
@@ -30,6 +43,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     token,
     user,
+    setUser,
     loading,
     setLoading,
     login,

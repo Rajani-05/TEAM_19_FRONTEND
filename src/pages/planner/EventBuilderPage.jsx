@@ -10,7 +10,7 @@ import Modal from '../../components/common/Modal';
 import Toast from '../../components/common/Toast';
 import { 
   Sparkles, ArrowLeft, Send, Copy, Check, Star, Filter, 
-  HelpCircle, AlertCircle
+  HelpCircle, AlertCircle, Plus, RefreshCw, Trash2, Building 
 } from 'lucide-react';
 
 const EventBuilderPage = () => {
@@ -79,7 +79,7 @@ const EventBuilderPage = () => {
       if (res.success && res.data) {
         setEvent(res.data); // Update event with new total cost directly from backend
         setToastType('success');
-        setToastMsg(`Vendor package updated successfully!`);
+        setToastMsg(`Event package updated: ${actionType.toLowerCase()}ed vendor successfully!`);
       } else {
         setToastType('error');
         setToastMsg(res.message || 'Action failed.');
@@ -108,16 +108,14 @@ const EventBuilderPage = () => {
   const handleSelectVendor = (selectedVendorId) => {
     setModalOpen(false);
     if (swapTargetId) {
-      // Swap action
       handleSlotAction('SWAP', selectedVendorId, swapTargetId);
     } else {
-      // Add action
       handleSlotAction('ADD', selectedVendorId);
     }
   };
 
   const handleRemoveSlot = (vendorId) => {
-    if (window.confirm('Are you sure you want to remove this vendor from the event package?')) {
+    if (window.confirm('Are you sure you want to delete this vendor from the event package?')) {
       handleSlotAction('REMOVE', vendorId);
     }
   };
@@ -129,13 +127,11 @@ const EventBuilderPage = () => {
       const res = await submitEventForApproval(id);
       if (res.success && res.data) {
         const { clientLinkToken } = res.data;
-        // Generate shareable link
         const generatedUrl = `${window.location.origin}/client-view/${clientLinkToken}`;
         setClientLink(generatedUrl);
         setToastType('success');
         setToastMsg('Proposal submitted for approval!');
         
-        // Refresh event status
         setEvent(prev => ({ ...prev, status: 'PENDING_APPROVAL', clientLinkToken }));
       } else {
         setToastType('error');
@@ -161,7 +157,6 @@ const EventBuilderPage = () => {
   // Resolve allocated vendor details
   const categories = ['VENUE', 'CATERING', 'DECOR', 'AV', 'OTHER'];
   const allocatedSlots = categories.reduce((acc, cat) => {
-    // Find if event has vendor in this category
     const eventAlloc = event.vendors?.find((evVendor) => {
       const resolved = allVendors.find((v) => v.id === evVendor.vendorId);
       return resolved && resolved.category === cat;
@@ -189,14 +184,14 @@ const EventBuilderPage = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {toastMsg && <Toast message={toastMsg} type={toastType} onClose={() => setToastMsg('')} />}
 
       {/* Navigation Header */}
       <div className="flex justify-between items-center">
         <Link 
           to="/planner/dashboard" 
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Planner Workspace
@@ -204,23 +199,23 @@ const EventBuilderPage = () => {
       </div>
 
       {/* Main Title Banner */}
-      <div className="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="glass-card p-8 border border-[var(--border-color)] flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-violet-50 text-violet-700 border border-violet-100">
-              Event Proposal
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              Event Proposal Package
             </span>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border
-              ${event.status === 'DRAFT' ? 'bg-slate-100 text-slate-650 border-slate-200' : ''}
-              ${event.status === 'PENDING_APPROVAL' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' : ''}
-              ${event.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700 border-emerald-150' : ''}
-              ${event.status === 'COMPLETED' ? 'bg-blue-50 text-blue-700 border-blue-150' : ''}
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase border
+              ${event.status === 'DRAFT' ? 'bg-slate-500/20 text-slate-400 border-slate-500/30' : ''}
+              ${event.status === 'PENDING_APPROVAL' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse' : ''}
+              ${event.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : ''}
+              ${event.status === 'COMPLETED' ? 'bg-pink-500/20 text-pink-400 border-pink-500/30' : ''}
             `}>
               {event.status}
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{event.title}</h1>
-          <p className="text-slate-500 text-sm">Client Email: <span className="font-semibold text-slate-700">{event.clientEmail}</span></p>
+          <h1 className="text-3xl font-black text-[var(--text-main)] tracking-tight">{event.title}</h1>
+          <p className="text-[var(--text-muted)] text-sm">Assigned Client: <span className="font-bold text-[var(--text-main)]">{event.clientEmail}</span></p>
         </div>
 
         {/* Submit Actions */}
@@ -228,10 +223,10 @@ const EventBuilderPage = () => {
           {event.status === 'DRAFT' && (
             <button
               onClick={handleSubmitProposal}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-md shadow-violet-100 hover:shadow-violet-250 transition-all"
+              className="btn-primary inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm shadow-xl transition-all"
             >
               <Send className="w-4 h-4" />
-              Submit for Approval
+              Submit Package to Client
             </button>
           )}
         </div>
@@ -239,34 +234,34 @@ const EventBuilderPage = () => {
 
       {/* Shareable Link Box */}
       {(clientLink || event.clientLinkToken) && (
-        <div className="bg-violet-50 border border-violet-150 p-6 rounded-2xl space-y-3">
-          <div className="flex items-center gap-2 text-violet-850 font-bold text-sm">
+        <div className="glass-card p-6 border border-[var(--border-color)] bg-emerald-500/10 space-y-3">
+          <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
             <Sparkles className="w-4 h-4" />
-            <span>Proposal Shareable Client Link Generated</span>
+            <span>Proposal Shareable Client Link Active</span>
           </div>
-          <p className="text-xs text-violet-750">
-            Share this link with your client. They can view the package details and approve or pay directly.
+          <p className="text-xs text-[var(--text-muted)]">
+            Share this token link with your client Rishika. They can inspect the package, approve vendor items, or checkout securely.
           </p>
-          <div className="flex gap-2 items-center bg-white p-2 rounded-xl border border-violet-150">
+          <div className="flex gap-2 items-center bg-[var(--bg-surface)] p-2 rounded-xl border border-[var(--border-color)]">
             <input
               type="text"
               readOnly
               value={clientLink || `${window.location.origin}/client-view/${event.clientLinkToken}`}
-              className="flex-1 bg-transparent text-xs text-slate-600 font-mono px-2 select-all outline-none border-none"
+              className="flex-1 bg-transparent text-xs text-[var(--text-main)] font-mono px-2 select-all outline-none border-none"
             />
             <button
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-50 text-slate-700 hover:bg-violet-600 hover:text-white rounded-lg border border-slate-200 transition-all text-xs font-bold shrink-0"
+              className="inline-flex items-center gap-1.5 px-4 py-2 btn-primary rounded-lg text-xs font-bold shrink-0 transition-all"
             >
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  Copied
+                  Copied!
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  Copy Link
+                  Copy Client Link
                 </>
               )}
             </button>
@@ -279,7 +274,16 @@ const EventBuilderPage = () => {
 
       {/* Vendor Slots Layout */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-slate-800 tracking-tight">Allocated Vendor Slots</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-black text-[var(--text-main)] tracking-tight flex items-center gap-2">
+            <Building className="w-6 h-6 text-pink-400" />
+            Package Vendor Category Slots
+          </h2>
+          <span className="text-xs text-[var(--text-muted)] font-semibold">
+            Use + Add Vendor, Swap Vendor, or Delete buttons below
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((cat) => (
             <VendorSlotCard
@@ -299,41 +303,40 @@ const EventBuilderPage = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={swapTargetId ? `Swap Vendor — ${activeCategory}` : `Assign Vendor — ${activeCategory}`}
+        title={swapTargetId ? `Swap Vendor — Category: ${activeCategory}` : `Add / Assign Vendor — Category: ${activeCategory}`}
       >
         <div className="space-y-4">
-          {/* Modal search bar */}
           <div className="relative">
             <input
               type="text"
               value={modalSearch}
               onChange={(e) => setModalSearch(e.target.value)}
-              className="appearance-none block w-full pl-4 pr-10 py-2.5 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-sm text-slate-900 transition-all"
-              placeholder="Search candidate vendors by name..."
+              className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-xl text-sm font-semibold text-[var(--text-main)] focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder-[var(--text-muted)]"
+              placeholder="Search candidate vendors by business name..."
             />
           </div>
 
           {/* Candidate list */}
           <div className="space-y-3 overflow-y-auto max-h-80 pr-1">
             {modalCandidates.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-xs">
-                No verified vendors found matching your search.
+              <div className="text-center py-8 text-[var(--text-muted)] text-xs border border-dashed border-[var(--border-color)] rounded-xl">
+                No verified vendors found for category "{activeCategory}".
               </div>
             ) : (
               modalCandidates.map((candidate) => (
                 <div 
                   key={candidate.id} 
-                  className="p-4 rounded-xl border border-slate-150 hover:border-violet-300 bg-slate-50/50 flex justify-between items-center gap-4 hover:bg-violet-50/5 transition-all"
+                  className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] hover:border-emerald-500/40 flex justify-between items-center gap-4 transition-all"
                 >
                   <div className="truncate flex-1 space-y-1">
-                    <h4 className="font-bold text-slate-800 text-sm truncate">{candidate.businessName}</h4>
-                    <p className="text-[10px] text-slate-500 line-clamp-1">{candidate.description}</p>
-                    <div className="flex gap-2 items-center text-[10px] text-slate-400 font-semibold pt-1">
-                      <span className="text-slate-800 font-bold">
+                    <h4 className="font-extrabold text-[var(--text-main)] text-sm truncate">{candidate.businessName}</h4>
+                    <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">{candidate.description}</p>
+                    <div className="flex gap-2 items-center text-[10px] font-semibold pt-1">
+                      <span className="text-emerald-400 font-bold">
                         {formatPrice(candidate.priceRange?.min)} - {formatPrice(candidate.priceRange?.max)}
                       </span>
-                      <span>•</span>
-                      <div className="flex items-center text-amber-500 gap-0.5">
+                      <span className="text-[var(--text-muted)]">•</span>
+                      <div className="flex items-center text-amber-400 gap-0.5">
                         <Star className="w-3 h-3 fill-current" />
                         <span>{(candidate.averageRating || 0).toFixed(1)}</span>
                       </div>
@@ -341,9 +344,9 @@ const EventBuilderPage = () => {
                   </div>
                   <button
                     onClick={() => handleSelectVendor(candidate.id)}
-                    className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-750 text-white rounded-lg text-xs font-bold transition-all shadow-sm shrink-0"
+                    className="px-4 py-2 btn-primary rounded-xl text-xs font-bold shadow-md shrink-0 transition-all"
                   >
-                    Select
+                    Select Vendor
                   </button>
                 </div>
               ))

@@ -10,6 +10,11 @@ export const getEventById = async (id) => {
   return response.data; // returns { success, message, data: event }
 };
 
+export const getMyEvents = async () => {
+  const response = await axiosClient.get('/api/events');
+  return response.data; // returns { success, message, data: [events] }
+};
+
 export const updateEventVendors = async (id, action, vendorId, replaceVendorId = null) => {
   const body = { action, vendorId };
   if (replaceVendorId) {
@@ -34,5 +39,11 @@ export const getClientEventView = async (clientLinkToken) => {
 
 export const approveClientEventView = async (clientLinkToken) => {
   const response = await axiosClient.post(`/api/events/client-view/${clientLinkToken}/approve`);
+  return response.data;
+};
+
+// Authenticated client bookings (for logged-in CLIENT role)
+export const getMyBookings = async () => {
+  const response = await axiosClient.get('/api/events/my-bookings');
   return response.data;
 };
