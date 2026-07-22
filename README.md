@@ -1,10 +1,15 @@
-# 🎭 EventPro — Event Planning Platform Frontend
+#  EventPro — Event Planning Platform Frontend
 
 ---
 
 This is the complete React + Tailwind CSS frontend for the **Event Planning Marketplace Platform**. It matches the backend API contract exactly and integrates authentication, budget builders, Gemini AI negotiation assistants, and Razorpay payments.
 
 ---
+Live demo :
+Application	Render URL	Status
+🎨 Production Frontend	https://team-19-frontend.onrender.com	Active on Render Cloud
+⚡ Production Backend	https://team-19-backend.onrender.com	Active on Render Cloud
+
 
 ## 🛠️ Technology Stack
 
