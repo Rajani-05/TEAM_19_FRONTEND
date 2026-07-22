@@ -7,8 +7,7 @@ This is the complete React + Tailwind CSS frontend for the **Event Planning Mark
 ---
 # Live demo :
 # Application	Render URL	Status
-🎨 Production Frontend	https://team-19-frontend.onrender.com	Active on Render Cloud
-⚡ Production Backend	https://team-19-backend.onrender.com	Active on Render Cloud
+🎨 Production Frontend	https://team-19-frontend.onrender.com	# Active on Render Cloud
 
 
 ## 🛠️ Technology Stack
