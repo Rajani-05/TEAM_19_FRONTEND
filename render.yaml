@@ -1,0 +1,12 @@
+services:
+  - type: static
+    name: team-19-frontend
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://team-19-backend.onrender.com
